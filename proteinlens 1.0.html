@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProteinLens — Binding Site Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050a0f;
+    --surface: #0b1420;
+    --surface2: #0f1e30;
+    --border: #1a3050;
+    --accent: #00d4ff;
+    --accent2: #7b2fff;
+    --warn: #ff6b35;
+    --success: #00ff88;
+    --danger: #ff3366;
+    --text: #c8dff0;
+    --text-dim: #5a7a96;
+    --text-bright: #f0f8ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* HEADER */
+  header {
+    padding: 40px 0 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+
+  .logo-icon {
+    width: 44px;
+    height: 44px;
+    position: relative;
+  }
+
+  .logo-icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    letter-spacing: -0.02em;
+    color: var(--text-bright);
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .tagline {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-left: 60px;
+  }
+
+  /* SEARCH BAR */
+  .search-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .search-section::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent), var(--accent2));
+    background-size: 200% 100%;
+    animation: shimmer 3s linear infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .search-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .search-row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .search-helper {
+    margin-top: 10px;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  .mini-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: rgba(0,212,255,0.04);
+    color: var(--text-dim);
+    font-size: 0.66rem;
+    margin-right: 8px;
+  }
+
+  .search-input-wrap {
+    flex: 1;
+    min-width: 200px;
+    position: relative;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    color: var(--text-bright);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,212,255,0.1);
+  }
+
+  input[type="text"]::placeholder {
+    color: var(--text-dim);
+  }
+
+  .search-type-wrap {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .type-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .type-btn.active, .type-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,212,255,0.05);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border: none;
+    color: #fff;
+    padding: 14px 28px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(0,212,255,0.25);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .quick-examples {
+    margin-top: 14px;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+
+  .quick-examples span {
+    color: var(--accent);
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    transition: text-decoration-color 0.15s;
+    margin: 0 4px;
+  }
+
+  .quick-examples span:hover {
+    text-decoration-color: var(--accent);
+  }
+
+  /* STATUS */
+  .status-bar {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    background: rgba(0,212,255,0.05);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 8px;
+    margin-bottom: 24px;
+    font-size: 0.8rem;
+  }
+
+  .status-bar.visible { display: flex; }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .status-text { color: var(--accent); }
+
+  /* RESULTS */
+  #results { display: none; animation: fadeIn 0.4s ease; }
+  #results.visible { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* PROTEIN INFO HEADER */
+  .protein-header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .protein-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-bright);
+    margin-bottom: 4px;
+  }
+
+  .protein-gene {
+    font-size: 0.8rem;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .protein-organism {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  .confidence-badge {
+    text-align: right;
+  }
+
+  .conf-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .conf-score {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+  }
+
+  .conf-score.high { color: var(--success); }
+  .conf-score.medium { color: var(--warn); }
+  .conf-score.low { color: var(--danger); }
+
+  .conf-desc { font-size: 0.7rem; color: var(--text-dim); }
+
+  /* DISEASE ALERT */
+  .disease-alert {
+    background: rgba(255,51,102,0.08);
+    border: 1px solid rgba(255,51,102,0.3);
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    display: none;
+  }
+
+  .disease-alert.visible { display: block; }
+
+  .disease-alert-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .alert-tag {
+    background: var(--danger);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-family: 'Syne', sans-serif;
+  }
+
+  .alert-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-bright);
+  }
+
+  .disease-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .disease-chip {
+    background: rgba(255,51,102,0.12);
+    border: 1px solid rgba(255,51,102,0.25);
+    border-radius: 100px;
+    padding: 5px 14px;
+    font-size: 0.75rem;
+    color: #ff99bb;
+  }
+
+  /* GRID */
+  .analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 680px) {
+    .analysis-grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .panel-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .panel-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-bright);
+  }
+
+  .panel-body { padding: 20px; }
+
+  /* PLDDT VISUALIZATION */
+  .plddt-bar-wrap {
+    margin-bottom: 12px;
+  }
+
+  .plddt-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .plddt-bar {
+    height: 10px;
+    border-radius: 100px;
+    background: var(--bg);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .plddt-fill {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .plddt-legend {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-top: 16px;
+    font-size: 0.65rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-dim);
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* BINDING SITES */
+  .binding-site {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    animation: slideIn 0.3s ease both;
+  }
+
+  .binding-site:last-child { border-bottom: none; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .site-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .site-name {
+    font-size: 0.8rem;
+    color: var(--text-bright);
+    font-weight: 700;
+  }
+
+  .site-score {
+    font-size: 0.75rem;
+    padding: 2px 10px;
+    border-radius: 100px;
+  }
+
+  .site-score.high { background: rgba(0,255,136,0.1); color: var(--success); border: 1px solid rgba(0,255,136,0.3); }
+  .site-score.med { background: rgba(255,107,53,0.1); color: var(--warn); border: 1px solid rgba(255,107,53,0.3); }
+  .site-score.low { background: rgba(255,51,102,0.1); color: var(--danger); border: 1px solid rgba(255,51,102,0.3); }
+
+  .site-residues {
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    word-break: break-all;
+    line-height: 1.6;
+  }
+
+  .site-residues .res-highlight {
+    color: var(--accent);
+    background: rgba(0,212,255,0.08);
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin: 1px;
+    display: inline-block;
+  }
+
+  /* FUNCTION TAGS */
+  .function-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .func-tag {
+    background: rgba(123,47,255,0.1);
+    border: 1px solid rgba(123,47,255,0.3);
+    color: #c099ff;
+    font-size: 0.72rem;
+    padding: 4px 12px;
+    border-radius: 100px;
+  }
+
+  /* STRUCTURE VIEWER PLACEHOLDER */
+  .structure-viewer {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+
+  .viewer-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .viewer-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-bright);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .viewer-canvas {
+    height: 360px;
+    background: radial-gradient(ellipse at center, #0a1828 0%, #050a0f 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .viewer-embed {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    z-index: 1;
+  }
+
+  .viewer-embed.visible {
+    opacity: 1;
+  }
+
+  /* Animated protein backbone visualization */
+  .backbone {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  }
+
+  .backbone svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .viewer-overlay {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    background: rgba(5, 10, 15, 0.42);
+    backdrop-filter: blur(6px);
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(26,48,80,0.8);
+  }
+
+  .viewer-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    color: var(--accent);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .viewer-link:hover {
+    background: rgba(0,212,255,0.2);
+    transform: translateY(-2px);
+  }
+
+  .viewer-caption {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-top: 10px;
+  }
+
+  /* VARIANT TABLE */
+  .variant-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+  }
+
+  .variant-table th {
+    text-align: left;
+    padding: 8px 12px;
+    color: var(--text-dim);
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+
+  .variant-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(26,48,80,0.5);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  .variant-table tr:last-child td { border-bottom: none; }
+
+  .var-pos { color: var(--accent); font-family: 'Space Mono', monospace; }
+  .var-change { color: var(--text-bright); font-weight: 700; }
+
+  .pathogenicity {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .path-pathogenic { background: rgba(255,51,102,0.2); color: var(--danger); }
+  .path-likely { background: rgba(255,107,53,0.2); color: var(--warn); }
+  .path-benign { background: rgba(0,255,136,0.15); color: var(--success); }
+  .path-vus { background: rgba(90,122,150,0.2); color: var(--text-dim); }
+
+  /* EXTERNAL LINKS */
+  .ext-links {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  .ext-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: all 0.15s;
+  }
+
+  .ext-link:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,212,255,0.05);
+  }
+
+  /* ERROR */
+  .error-box {
+    background: rgba(255,51,102,0.08);
+    border: 1px solid rgba(255,51,102,0.3);
+    border-radius: 10px;
+    padding: 20px 24px;
+    color: #ff99bb;
+    font-size: 0.85rem;
+    display: none;
+  }
+
+  .error-box.visible { display: block; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    line-height: 2;
+  }
+
+  .empty-state .big-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    display: block;
+    opacity: 0.4;
+  }
+
+  /* SEQUENCE STRIP */
+  .sequence-strip {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    word-break: break-all;
+    line-height: 2;
+    color: var(--text-dim);
+    padding: 12px;
+    background: var(--bg);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    max-height: 80px;
+    overflow-y: auto;
+    letter-spacing: 0.05em;
+  }
+
+  .sequence-strip .seq-active {
+    color: var(--success);
+    background: rgba(0,255,136,0.1);
+    border-radius: 2px;
+  }
+
+  .sequence-strip .seq-variant {
+    color: var(--danger);
+    background: rgba(255,51,102,0.15);
+    border-radius: 2px;
+  }
+
+  .section-full {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+
+  .provenance-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 860px) {
+    .provenance-grid { grid-template-columns: 1fr; }
+    .protein-header { grid-template-columns: 1fr; }
+    .confidence-badge { text-align: left; }
+  }
+
+  .prov-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+  }
+
+  .prov-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 7px;
+  }
+
+  .prov-title {
+    color: var(--text-bright);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .prov-body {
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    line-height: 1.75;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="22" cy="22" r="20" stroke="#1a3050" stroke-width="1.5"/>
+          <circle cx="22" cy="22" r="8" stroke="#00d4ff" stroke-width="1.5" stroke-dasharray="4 2"/>
+          <circle cx="22" cy="10" r="3" fill="#7b2fff"/>
+          <circle cx="34" cy="22" r="3" fill="#00d4ff"/>
+          <circle cx="22" cy="34" r="3" fill="#00ff88"/>
+          <circle cx="10" cy="22" r="3" fill="#ff6b35"/>
+          <line x1="22" y1="13" x2="22" y2="14" stroke="#1a3050" stroke-width="1.5"/>
+          <line x1="31" y1="22" x2="30" y2="22" stroke="#1a3050" stroke-width="1.5"/>
+          <line x1="22" y1="31" x2="22" y2="30" stroke="#1a3050" stroke-width="1.5"/>
+          <line x1="13" y1="22" x2="14" y2="22" stroke="#1a3050" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <h1>Protein<span>Lens</span></h1>
+    </div>
+    <div class="tagline">AlphaFold · Binding Site Analysis · Disease Variant Mapping</div>
+  </header>
+
+  <!-- SEARCH -->
+  <div class="search-section">
+    <label class="search-label">▸ Search Protein</label>
+    <div class="search-row">
+      <div class="search-input-wrap">
+        <input type="text" id="searchInput" placeholder="UniProt ID, gene name, or protein name..." />
+      </div>
+      <div class="search-type-wrap">
+        <button class="type-btn active" id="typeUniprot" onclick="setType('uniprot')">UniProt ID</button>
+        <button class="type-btn" id="typeGene" onclick="setType('gene')">Gene Name</button>
+      </div>
+      <button class="btn-primary" id="searchBtn" onclick="runSearch()">▶ Analyze</button>
+    </div>
+    <div class="quick-examples">
+      Try:
+      <span onclick="quickSearch('P04637', 'uniprot')">TP53 (P04637)</span>
+      <span onclick="quickSearch('P00533', 'uniprot')">EGFR (P00533)</span>
+      <span onclick="quickSearch('P35557', 'uniprot')">GCK (P35557)</span>
+      <span onclick="quickSearch('P01116', 'uniprot')">KRAS (P01116)</span>
+      <span onclick="quickSearch('P0DTD1', 'uniprot')">SARS-CoV-2 3CLpro</span>
+    </div>
+    <div class="search-helper">
+      <span class="mini-pill">Gene mode: reviewed human entries only</span>
+      <span class="mini-pill">pLDDT now parsed from AlphaFold mmCIF when available</span>
+    </div>
+  </div>
+
+  <!-- STATUS -->
+  <div class="status-bar" id="statusBar">
+    <div class="spinner"></div>
+    <span class="status-text" id="statusText">Querying UniProt...</span>
+  </div>
+
+  <!-- ERROR -->
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <!-- Protein Header -->
+    <div class="protein-header">
+      <div>
+        <div class="protein-name" id="resName">—</div>
+        <div class="protein-gene" id="resGene">—</div>
+        <div class="protein-organism" id="resOrganism">—</div>
+        <div class="ext-links" id="extLinks"></div>
+      </div>
+      <div class="confidence-badge">
+        <div class="conf-label">AlphaFold avg pLDDT</div>
+        <div class="conf-score" id="confScore">—</div>
+        <div class="conf-desc" id="confDesc">—</div>
+      </div>
+    </div>
+
+    <div class="provenance-grid">
+      <div class="prov-card">
+        <div class="prov-label">Data provenance</div>
+        <div class="prov-title">UniProt annotations</div>
+        <div class="prov-body" id="provUniProt">Sequence, natural variants, disease comments, GO terms, and annotated residues come directly from the UniProt entry.</div>
+      </div>
+      <div class="prov-card">
+        <div class="prov-label">Data provenance</div>
+        <div class="prov-title">AlphaFold confidence</div>
+        <div class="prov-body" id="provAlphaFold">Average confidence and confidence bins are calculated from per-residue pLDDT values parsed from the AlphaFold mmCIF model when available.</div>
+      </div>
+      <div class="prov-card">
+        <div class="prov-label">Interpretation</div>
+        <div class="prov-title">Inferred summaries</div>
+        <div class="prov-body" id="provInference">Priority labels and short notes are interface-level summaries. They are not new experimental predictions.</div>
+      </div>
+    </div>
+
+    <!-- Disease Alert -->
+    <div class="disease-alert" id="diseaseAlert">
+      <div class="disease-alert-header">
+        <span class="alert-tag">⚠ Disease Association</span>
+        <span class="alert-title">Pathogenic variants reported</span>
+      </div>
+      <div class="disease-list" id="diseaseList"></div>
+    </div>
+
+    <!-- Sequence strip -->
+    <div class="section-full">
+      <div class="panel-header">
+        <div class="panel-icon" style="background:rgba(0,212,255,0.1)">🧬</div>
+        <div class="panel-title">Canonical Sequence</div>
+        <span style="font-size:0.7rem;color:var(--text-dim);margin-left:auto" id="seqLen">—</span>
+      </div>
+      <div class="panel-body">
+        <div class="sequence-strip" id="seqStrip">—</div>
+      </div>
+    </div>
+
+    <!-- Main grid -->
+    <div class="analysis-grid">
+
+      <!-- Binding Sites -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-icon" style="background:rgba(0,255,136,0.1)">🔬</div>
+          <div class="panel-title">Annotated Functional / Binding Residues</div>
+        </div>
+        <div class="panel-body" id="bindingSites">
+          <div style="color:var(--text-dim);font-size:0.8rem">Loading...</div>
+        </div>
+      </div>
+
+      <!-- pLDDT Breakdown -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-icon" style="background:rgba(123,47,255,0.1)">📊</div>
+          <div class="panel-title">Structure Confidence (pLDDT)</div>
+        </div>
+        <div class="panel-body">
+          <div class="plddt-bar-wrap">
+            <div class="plddt-label"><span>Very High (≥90)</span><span id="pHigh">—</span></div>
+            <div class="plddt-bar"><div class="plddt-fill" id="barHigh" style="width:0%;background:var(--success)"></div></div>
+          </div>
+          <div class="plddt-bar-wrap">
+            <div class="plddt-label"><span>Confident (70–89)</span><span id="pConf">—</span></div>
+            <div class="plddt-bar"><div class="plddt-fill" id="barConf" style="width:0%;background:#66ccff"></div></div>
+          </div>
+          <div class="plddt-bar-wrap">
+            <div class="plddt-label"><span>Low (50–69)</span><span id="pLow">—</span></div>
+            <div class="plddt-bar"><div class="plddt-fill" id="barLow" style="width:0%;background:var(--warn)"></div></div>
+          </div>
+          <div class="plddt-bar-wrap">
+            <div class="plddt-label"><span>Very Low (&lt;50)</span><span id="pVlow">—</span></div>
+            <div class="plddt-bar"><div class="plddt-fill" id="barVlow" style="width:0%;background:var(--danger)"></div></div>
+          </div>
+          <div class="plddt-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:var(--success)"></div>Reliable</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#66ccff"></div>Good</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--warn)"></div>Flexible</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--danger)"></div>Disordered</div>
+          </div>
+          <div style="margin-top:16px;font-size:0.72rem;color:var(--text-dim);line-height:1.7" id="plddtNote">—</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Structure viewer -->
+    <div class="structure-viewer">
+      <div class="viewer-header">
+        <div class="viewer-title">
+          <span>🧊</span>
+          <span>3D Structure — AlphaFold Model</span>
+        </div>
+      </div>
+      <div class="viewer-canvas" id="viewerCanvas">
+        <iframe class="viewer-embed" id="molstarEmbed" title="Embedded Mol* Viewer"></iframe>
+        <div class="backbone" id="svgBackbone"></div>
+        <div class="viewer-overlay">
+          <a class="viewer-link" id="afLink" href="#" target="_blank">
+            ↗ Open in AlphaFold DB
+          </a>
+          <a class="viewer-link" id="molstarLink" href="#" target="_blank" style="margin-left:8px">
+            ↗ View in Mol* Viewer
+          </a>
+          <div class="viewer-caption">3D interactive structure available at AlphaFold Database</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Variants / disease grid -->
+    <div class="analysis-grid">
+
+      <!-- Functional annotations -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-icon" style="background:rgba(255,107,53,0.1)">⚙️</div>
+          <div class="panel-title">Molecular Function</div>
+        </div>
+        <div class="panel-body">
+          <div class="function-tags" id="funcTags">—</div>
+          <div style="margin-top:14px;font-size:0.72rem;color:var(--text-dim);line-height:1.8" id="funcNote">—</div>
+        </div>
+      </div>
+
+      <!-- Pathways / process -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-icon" style="background:rgba(0,212,255,0.1)">🔗</div>
+          <div class="panel-title">Biological Process</div>
+        </div>
+        <div class="panel-body">
+          <div class="function-tags" id="procTags">—</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Variants table -->
+    <div class="section-full">
+      <div class="panel-header">
+        <div class="panel-icon" style="background:rgba(255,51,102,0.1)">🧫</div>
+        <div class="panel-title">Disease-Associated Variants</div>
+        <span style="font-size:0.7rem;color:var(--text-dim);margin-left:auto">Source: UniProt Natural Variants</span>
+      </div>
+      <div class="panel-body" style="overflow-x:auto">
+        <table class="variant-table">
+          <thead>
+            <tr>
+              <th>Position</th>
+              <th>Change</th>
+              <th>Pathogenicity</th>
+              <th>Associated Disease / Note</th>
+            </tr>
+          </thead>
+          <tbody id="variantRows">
+            <tr><td colspan="4" style="color:var(--text-dim);text-align:center;padding:20px">Loading variants...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /results -->
+
+</div><!-- /container -->
+
+<script>
+let searchType = 'uniprot';
+
+function setType(t) {
+  searchType = t;
+  document.getElementById('typeUniprot').classList.toggle('active', t === 'uniprot');
+  document.getElementById('typeGene').classList.toggle('active', t === 'gene');
+}
+
+function quickSearch(id, type) {
+  setType(type);
+  document.getElementById('searchInput').value = id;
+  runSearch();
+}
+
+function setStatus(msg) {
+  const bar = document.getElementById('statusBar');
+  document.getElementById('statusText').textContent = msg;
+  bar.classList.add('visible');
+}
+
+function hideStatus() {
+  document.getElementById('statusBar').classList.remove('visible');
+}
+
+function showError(msg) {
+  hideStatus();
+  const eb = document.getElementById('errorBox');
+  eb.textContent = msg;
+  eb.classList.add('visible');
+}
+
+function hideError() {
+  document.getElementById('errorBox').classList.remove('visible');
+}
+
+function escapeHtml(str = '') {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function resetResultState() {
+  document.getElementById('results').classList.remove('visible');
+  document.getElementById('diseaseAlert').classList.remove('visible');
+  document.getElementById('diseaseList').innerHTML = '';
+  document.getElementById('variantRows').innerHTML = '<tr><td colspan="4" style="color:var(--text-dim);text-align:center;padding:20px">Loading variants...</td></tr>';
+  document.getElementById('bindingSites').innerHTML = '<div style="color:var(--text-dim);font-size:0.8rem">Loading...</div>';
+  document.getElementById('funcTags').innerHTML = '—';
+  document.getElementById('procTags').innerHTML = '—';
+  document.getElementById('funcNote').textContent = '—';
+}
+
+async function runSearch() {
+  const raw = document.getElementById('searchInput').value.trim();
+  if (!raw) return;
+
+  hideError();
+  resetResultState();
+  document.getElementById('searchBtn').disabled = true;
+
+  try {
+    let uniprotId = raw;
+
+    if (searchType === 'gene') {
+      setStatus(`Resolving gene "${raw}" → UniProt...`);
+      const res = await fetch(`https://rest.uniprot.org/uniprotkb/search?query=gene:${encodeURIComponent(raw)}+AND+organism_id:9606+AND+reviewed:true&fields=accession&format=json&size=1`);
+      const data = await res.json();
+      if (!data.results || data.results.length === 0) throw new Error(`No reviewed human UniProt entry found for gene: ${raw}`);
+      uniprotId = data.results[0].primaryAccession;
+    }
+
+    setStatus(`Fetching UniProt entry for ${uniprotId}...`);
+    const upRes = await fetch(`https://rest.uniprot.org/uniprotkb/${uniprotId}?format=json`);
+    if (!upRes.ok) throw new Error(`UniProt entry not found: ${uniprotId}`);
+    const upData = await upRes.json();
+
+    setStatus('Querying AlphaFold Database...');
+    let afData = null;
+    try {
+      const afRes = await fetch(`https://alphafold.ebi.ac.uk/api/prediction/${uniprotId}`);
+      if (afRes.ok) afData = await afRes.json();
+    } catch (e) {}
+
+    hideStatus();
+    await renderResults(uniprotId, upData, afData);
+  } catch (err) {
+    showError(`Error: ${err.message}`);
+  }
+
+  document.getElementById('searchBtn').disabled = false;
+}
+
+async function renderResults(uniprotId, up, af) {
+  document.getElementById('results').classList.add('visible');
+
+  const name = up.proteinDescription?.recommendedName?.fullName?.value
+    || up.proteinDescription?.submissionNames?.[0]?.fullName?.value
+    || 'Unknown Protein';
+
+  const gene = up.genes?.[0]?.geneName?.value || '—';
+  const organism = up.organism?.scientificName || '—';
+  const seq = up.sequence?.value || '';
+  const seqLen = up.sequence?.length || 0;
+
+  document.getElementById('resName').textContent = name;
+  document.getElementById('resGene').textContent = `Gene: ${gene}  ·  UniProt: ${uniprotId}`;
+  document.getElementById('resOrganism').textContent = organism;
+  document.getElementById('seqLen').textContent = `${seqLen} aa`;
+  document.getElementById('seqStrip').innerHTML = renderSequence(seq, up.features || []);
+
+  const linksDiv = document.getElementById('extLinks');
+  linksDiv.innerHTML = `
+    <a class="ext-link" href="https://www.uniprot.org/uniprotkb/${encodeURIComponent(uniprotId)}" target="_blank">↗ UniProt</a>
+    <a class="ext-link" href="https://alphafold.ebi.ac.uk/entry/${encodeURIComponent(uniprotId)}" target="_blank">↗ AlphaFold DB</a>
+    <a class="ext-link" href="https://www.rcsb.org/search?request=%7B%22query%22%3A%7B%22type%22%3A%22terminal%22%2C%22service%22%3A%22text%22%2C%22parameters%22%3A%7B%22value%22%3A%22${encodeURIComponent(gene)}%22%7D%7D%7D" target="_blank">↗ RCSB PDB</a>
+    <a class="ext-link" href="https://www.ncbi.nlm.nih.gov/clinvar/?term=${encodeURIComponent(gene)}[gene]" target="_blank">↗ ClinVar</a>
+  `;
+
+  const afEntry = Array.isArray(af) && af[0] ? af[0] : null;
+  const afUrl = `https://alphafold.ebi.ac.uk/entry/${encodeURIComponent(uniprotId)}`;
+  const cifUrl = afEntry?.cifUrl || `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v4.cif`;
+
+  document.getElementById('afLink').href = afUrl;
+  document.getElementById('molstarLink').href = `https://molstar.org/viewer/?afdb=${encodeURIComponent(uniprotId)}`;
+  setEmbeddedViewer(uniprotId, !!afEntry);
+
+  let plddtInfo = null;
+  if (afEntry) {
+    setStatus('Parsing per-residue pLDDT from AlphaFold mmCIF...');
+    plddtInfo = await fetchPLDDTFromCif(cifUrl, afEntry);
+    hideStatus();
+  }
+  renderPLDDT(plddtInfo);
+
+  const diseases = up.comments?.filter(c => c.commentType === 'DISEASE') || [];
+  const variantFeatures = (up.features || []).filter(f => f.type === 'Natural variant' && f.description);
+
+  if (diseases.length > 0) {
+    document.getElementById('diseaseAlert').classList.add('visible');
+    const dl = document.getElementById('diseaseList');
+    dl.innerHTML = diseases.map(d => {
+      const label = d.disease?.diseaseId || d.disease?.description || d.note?.texts?.[0]?.value || 'Disease association';
+      return `<span class="disease-chip">${escapeHtml(String(label).slice(0, 75))}</span>`;
+    }).join('');
+  }
+
+  renderBindingSites(up.features || [], seq);
+  renderVariants(variantFeatures);
+
+  const go = up.uniProtKBCrossReferences?.filter(r => r.database === 'GO') || [];
+  const funcs = go.filter(g => g.properties?.find(p => p.key === 'GoTerm' && p.value?.startsWith('F:')))
+    .map(g => g.properties.find(p => p.key === 'GoTerm')?.value?.replace('F:', '').trim())
+    .filter(Boolean).slice(0, 8);
+  const procs = go.filter(g => g.properties?.find(p => p.key === 'GoTerm' && p.value?.startsWith('P:')))
+    .map(g => g.properties.find(p => p.key === 'GoTerm')?.value?.replace('P:', '').trim())
+    .filter(Boolean).slice(0, 8);
+
+  document.getElementById('funcTags').innerHTML = funcs.length
+    ? funcs.map(f => `<span class="func-tag">${escapeHtml(f)}</span>`).join('')
+    : '<span style="color:var(--text-dim);font-size:0.8rem">No GO molecular function annotations</span>';
+
+  document.getElementById('procTags').innerHTML = procs.length
+    ? procs.map(p => `<span class="func-tag">${escapeHtml(p)}</span>`).join('')
+    : '<span style="color:var(--text-dim);font-size:0.8rem">No GO biological process annotations</span>';
+
+  const fnNote = up.comments?.find(c => c.commentType === 'FUNCTION');
+  const fnText = fnNote?.texts?.[0]?.value || '';
+  document.getElementById('funcNote').textContent = fnText ? fnText.slice(0, 280) + (fnText.length > 280 ? '…' : '') : 'No concise UniProt function summary available.';
+
+  drawBackbone();
+}
+
+function setEmbeddedViewer(uniprotId, hasAfModel) {
+  const iframe = document.getElementById('molstarEmbed');
+  if (!hasAfModel) {
+    iframe.classList.remove('visible');
+    iframe.removeAttribute('src');
+    return;
+  }
+  iframe.src = `https://molstar.org/viewer/?afdb=${encodeURIComponent(uniprotId)}&hide-controls=1`;
+  iframe.classList.add('visible');
+}
+
+function renderSequence(seq, features) {
+  if (!seq) return '<span style="color:var(--text-dim)">No sequence available</span>';
+  const bindingPositions = new Set();
+  const variantPositions = new Set();
+  features.forEach(f => {
+    if (['Active site', 'Binding site', 'Metal binding', 'Site'].includes(f.type)) {
+      for (let i = (f.location?.start?.value || 1) - 1; i < (f.location?.end?.value || 1); i++) bindingPositions.add(i);
+    }
+    if (f.type === 'Natural variant') {
+      const p = (f.location?.start?.value || 1) - 1;
+      variantPositions.add(p);
+    }
+  });
+  return seq.split('').map((aa, i) => {
+    if (variantPositions.has(i)) return `<span class="seq-variant" title="Variant at pos ${i + 1}">${aa}</span>`;
+    if (bindingPositions.has(i)) return `<span class="seq-active" title="Annotated residue ${i + 1}">${aa}</span>`;
+    return aa;
+  }).join('');
+}
+
+async function fetchPLDDTFromCif(cifUrl, afEntry) {
+  try {
+    const res = await fetch(cifUrl);
+    if (!res.ok) throw new Error('Could not download AlphaFold mmCIF');
+    const cifText = await res.text();
+    const values = parsePlddtValuesFromCif(cifText);
+    if (!values.length) throw new Error('No pLDDT values found in mmCIF');
+    return summarizePLDDT(values, cifUrl);
+  } catch (err) {
+    const avgFallback = Number(afEntry?.globalMetricValue || afEntry?.confidenceScore || afEntry?.plddt);
+    if (Number.isFinite(avgFallback)) {
+      return {
+        avg: avgFallback,
+        count: null,
+        bins: null,
+        source: 'AlphaFold API summary only',
+        note: 'Per-residue pLDDT parsing was unavailable, so only the AlphaFold summary score could be shown.'
+      };
+    }
+    return null;
+  }
+}
+
+function parsePlddtValuesFromCif(cifText) {
+  const lines = cifText.split(/\r?\n/);
+  const headerIndex = lines.findIndex(line => line.trim() === '_ma_qa_metric_local.metric_value');
+  if (headerIndex === -1) return [];
+
+  let start = headerIndex + 1;
+  const values = [];
+  for (let i = start; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (!trimmed || trimmed.startsWith('#')) {
+      if (values.length) break;
+      continue;
+    }
+    if (trimmed.startsWith('_') || trimmed === 'loop_') {
+      if (values.length) break;
+      continue;
+    }
+    const parts = trimmed.match(/(?:'[^']*'|"[^"]*"|\S+)/g);
+    if (!parts || parts.length < 6) continue;
+    const value = Number(parts[5].replace(/['"]/g, ''));
+    if (Number.isFinite(value)) values.push(value);
+  }
+  return values;
+}
+
+function summarizePLDDT(values, sourceUrl) {
+  const total = values.length;
+  const avg = values.reduce((a, b) => a + b, 0) / total;
+  const bins = {
+    high: values.filter(v => v >= 90).length,
+    conf: values.filter(v => v >= 70 && v < 90).length,
+    low: values.filter(v => v >= 50 && v < 70).length,
+    vlow: values.filter(v => v < 50).length,
+  };
+  return {
+    avg,
+    count: total,
+    bins: {
+      high: Math.round((bins.high / total) * 100),
+      conf: Math.round((bins.conf / total) * 100),
+      low: Math.round((bins.low / total) * 100),
+      vlow: Math.max(0, 100 - Math.round((bins.high / total) * 100) - Math.round((bins.conf / total) * 100) - Math.round((bins.low / total) * 100)),
+    },
+    source: 'AlphaFold mmCIF per-residue pLDDT',
+    note: `Computed from ${total} per-residue local confidence values parsed from the AlphaFold structure file.`
+  };
+}
+
+function renderPLDDT(info) {
+  let high = 0, conf = 0, low = 0, vlow = 0;
+  const scoreEl = document.getElementById('confScore');
+  const descEl = document.getElementById('confDesc');
+  const noteEl = document.getElementById('plddtNote');
+
+  if (!info) {
+    scoreEl.textContent = 'N/A';
+    scoreEl.className = 'conf-score medium';
+    descEl.textContent = 'AlphaFold model not available';
+    noteEl.textContent = 'No AlphaFold prediction found for this protein.';
+  } else {
+    const avg = info.avg;
+    scoreEl.textContent = Number.isFinite(avg) ? avg.toFixed(1) : 'N/A';
+    if (avg >= 80) {
+      scoreEl.className = 'conf-score high';
+      descEl.textContent = 'High confidence model';
+    } else if (avg >= 65) {
+      scoreEl.className = 'conf-score medium';
+      descEl.textContent = 'Moderate confidence';
+    } else {
+      scoreEl.className = 'conf-score low';
+      descEl.textContent = 'Low confidence / flexible model';
+    }
+
+    if (info.bins) {
+      high = info.bins.high;
+      conf = info.bins.conf;
+      low = info.bins.low;
+      vlow = info.bins.vlow;
+      noteEl.textContent = `${info.note} Source: ${info.source}. Very low-confidence regions often correspond to disorder or flexible loops, but should not be treated as binding pockets by default.`;
+    } else {
+      noteEl.textContent = `${info.note} Source: ${info.source}.`;
+    }
+  }
+
+  setTimeout(() => {
+    document.getElementById('barHigh').style.width = high + '%';
+    document.getElementById('barConf').style.width = conf + '%';
+    document.getElementById('barLow').style.width = low + '%';
+    document.getElementById('barVlow').style.width = vlow + '%';
+    document.getElementById('pHigh').textContent = high + '%';
+    document.getElementById('pConf').textContent = conf + '%';
+    document.getElementById('pLow').textContent = low + '%';
+    document.getElementById('pVlow').textContent = vlow + '%';
+  }, 100);
+}
+
+function renderBindingSites(features, seq) {
+  const container = document.getElementById('bindingSites');
+  const sites = features.filter(f => ['Active site', 'Binding site', 'Metal binding', 'Site'].includes(f.type));
+
+  if (!sites.length) {
+    container.innerHTML = `<div style="color:var(--text-dim);font-size:0.8rem;line-height:1.8">
+      No experimentally annotated functional residues were found in this UniProt entry.<br>
+      <span style="color:var(--accent)">→</span> This panel reports existing UniProt annotations only; it is not running pocket prediction.
+    </div>`;
+    return;
+  }
+
+  const grouped = {};
+  sites.forEach(s => {
+    const key = s.type;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(s);
+  });
+
+  container.innerHTML = Object.entries(grouped).map(([type, entries], idx) => {
+    const residues = entries.map(e => {
+      const pos = e.location?.start?.value;
+      const aa = pos && seq ? seq[pos - 1] : '?';
+      return `<span class="res-highlight">${escapeHtml(aa)}${pos || '?'}</span>`;
+    });
+
+    const score = entries.length > 3 ? 'high' : entries.length > 1 ? 'med' : 'low';
+    const scoreLabel = score === 'high' ? 'More annotations' : score === 'med' ? 'Multiple sites' : 'Single site';
+    const description = entries.map(e => e.description).filter(Boolean).slice(0, 2).join(' · ');
+
+    return `
+    <div class="binding-site" style="animation-delay:${idx * 0.1}s">
+      <div class="site-row">
+        <div class="site-name">${escapeHtml(type)}</div>
+        <div class="site-score ${score}">${scoreLabel}</div>
+      </div>
+      <div class="site-residues">${residues.join(' ')}</div>
+      <div style="font-size:0.7rem;color:var(--text-dim);margin-top:4px">Source: UniProt feature annotations${description ? ` · ${escapeHtml(description)}` : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function classifyVariant(desc) {
+  const lower = desc.toLowerCase();
+  if (/likely pathogenic/.test(lower)) return { cls: 'path-likely', label: 'Likely path.' };
+  if (/pathogenic/.test(lower)) return { cls: 'path-pathogenic', label: 'Pathogenic' };
+  if (/likely benign/.test(lower)) return { cls: 'path-benign', label: 'Likely benign' };
+  if (/benign/.test(lower)) return { cls: 'path-benign', label: 'Benign' };
+  if (/uncertain|vus|unknown significance/.test(lower)) return { cls: 'path-vus', label: 'Uncertain' };
+  return { cls: 'path-vus', label: 'Reported' };
+}
+
+function cleanVariantDescription(desc) {
+  return desc
+    .replace(/\{[^}]*\}/g, ' ')
+    .replace(/in dbsnp/ig, ' ')
+    .replace(/;\s*dbsnp:[^;]+/ig, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function renderVariants(variants) {
+  const tbody = document.getElementById('variantRows');
+  const diseased = variants.filter(v => v.description && !/in dbsnp/i.test(v.description));
+  if (!diseased.length) {
+    tbody.innerHTML = `<tr><td colspan="4" style="color:var(--text-dim);text-align:center;padding:20px;font-size:0.8rem">No disease-annotated variants found in this UniProt entry.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = diseased.slice(0, 20).map(v => {
+    const pos = v.location?.start?.value || '?';
+    const orig = v.alternativeSequence?.originalSequence || '?';
+    const alt = v.alternativeSequence?.alternativeSequences?.[0] || '?';
+    const desc = cleanVariantDescription(v.description || '');
+    const cls = classifyVariant(desc);
+
+    return `<tr>
+      <td><span class="var-pos">${escapeHtml(pos)}</span></td>
+      <td><span class="var-change">${escapeHtml(orig)}→${escapeHtml(alt)}</span></td>
+      <td><span class="pathogenicity ${cls.cls}">${cls.label}</span></td>
+      <td style="color:var(--text-dim);font-size:0.72rem">${escapeHtml(desc.slice(0, 180))}${desc.length > 180 ? '…' : ''}</td>
+    </tr>`;
+  }).join('');
+}
+
+function drawBackbone() {
+  const container = document.getElementById('svgBackbone');
+  const W = 1100, H = 360;
+  const points = [];
+  for (let i = 0; i <= 80; i++) {
+    const x = (i / 80) * W;
+    const y = H / 2 + Math.sin(i * 0.3) * 60 + Math.sin(i * 0.7) * 30 + Math.cos(i * 0.15) * 40;
+    points.push([x, y]);
+  }
+  const pathD = points.map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`)).join(' ');
+
+  const spheres = points.filter((_, i) => i % 8 === 0).map(([x, y], i) => {
+    const colors = ['#00d4ff', '#7b2fff', '#00ff88', '#ff6b35'];
+    const c = colors[i % colors.length];
+    return `<circle cx="${x}" cy="${y}" r="5" fill="${c}" opacity="0.55">
+      <animate attributeName="r" values="5;7;5" dur="${1.5 + i * 0.2}s" repeatCount="indefinite"/>
+    </circle>`;
+  }).join('');
+
+  container.innerHTML = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <linearGradient id="chainGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#7b2fff" stop-opacity="0.32"/>
+        <stop offset="50%" stop-color="#00d4ff" stop-opacity="0.42"/>
+        <stop offset="100%" stop-color="#00ff88" stop-opacity="0.32"/>
+      </linearGradient>
+    </defs>
+    <path d="${pathD}" stroke="url(#chainGrad)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    ${spheres}
+  </svg>`;
+}
+
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runSearch();
+});
+</script>
+</body>
+</html>
